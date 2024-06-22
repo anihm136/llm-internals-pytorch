@@ -1,4 +1,6 @@
-from src.models.bigram_model import BigramLanguageModelv0, BigramLanguageModelv1, BigramLanguageModelv2
+from src.models.bigram_model import (
+    BigramLanguageModelv2,
+)
 from src.tokenizers.char_tokenizer import CharTokenizer
 from src.dataloaders.block_loader import BlockLoader
 from src.loss import estimate_loss
@@ -11,11 +13,15 @@ if __name__ == "__main__":
 
     DATA_PATH = "./input.txt"
 
-    BATCH_SIZE = 32
-    CONTEXT_LENGTH = 8
+    BATCH_SIZE = 64
+    CONTEXT_LENGTH = 256
+    EMBEDDING_DIM = 384
+    NUM_ATTENTION_HEADS = 6
+    NUM_LAYERS = 6
 
     TRAIN_STEPS = 5000
     EVAL_INTERVAL_STEPS = 500
+    LEARNING_RATE = 3e-4
 
     torch.manual_seed(SEED)
 
@@ -36,10 +42,16 @@ if __name__ == "__main__":
 
     # model = BigramLanguageModelv0(tokenizer.vocab_size, tokenizer.vocab_size)
     # model = BigramLanguageModelv1(tokenizer.vocab_size, CONTEXT_LENGTH)
-    model = BigramLanguageModelv2(tokenizer.vocab_size, CONTEXT_LENGTH)
+    model = BigramLanguageModelv2(
+        tokenizer.vocab_size,
+        CONTEXT_LENGTH,
+        embedding_dim=EMBEDDING_DIM,
+        num_layers=NUM_LAYERS,
+        num_attention_heads=NUM_ATTENTION_HEADS,
+    )
     model.to(device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
     loss = float("inf")
     for steps in range(TRAIN_STEPS):

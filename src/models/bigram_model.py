@@ -157,16 +157,24 @@ class BigramLanguageModelv2(nn.Module):
     """
 
     def __init__(
-        self, vocab_size, context_size, embedding_dim=32, num_attention_heads=4
+        self,
+        vocab_size,
+        context_size,
+        embedding_dim=32,
+        num_attention_heads=4,
+        num_layers=4,
     ):
         super().__init__()
         self.tok_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.pos_embeddings = nn.Embedding(context_size, embedding_dim)
         self.transformer = nn.Sequential(
-            TransformerBlock(embedding_dim, num_attention_heads, context_size),
-            TransformerBlock(embedding_dim, num_attention_heads, context_size),
-            TransformerBlock(embedding_dim, num_attention_heads, context_size),
-            nn.LayerNorm(embedding_dim)
+            *(
+                [
+                    TransformerBlock(embedding_dim, num_attention_heads, context_size)
+                    for _ in range(num_layers)
+                ]
+                + [nn.LayerNorm(embedding_dim)]
+            )
         )
         self.lm_head = nn.Linear(embedding_dim, vocab_size)
 
