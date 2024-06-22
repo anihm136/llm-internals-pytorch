@@ -123,19 +123,38 @@ class MultiHeadAttention(nn.Module):
         return torch.cat([h(idx) for h in self.heads], dim=-1)
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self, embedding_dim, num_attention_heads, context_size):
+        super().__init__()
+        head_dim = embedding_dim // num_attention_heads
+        self.att = MultiHeadAttention(
+            num_attention_heads, embedding_dim, head_dim, context_size
+        )
+        self.ffwd = nn.Sequential(nn.Linear(embedding_dim, embedding_dim), nn.ReLU())
+
+    def forward(self, idx):
+        idx = self.att(idx)
+        idx = self.ffwd(idx)
+        return idx
+
+
 class BigramLanguageModelv2(nn.Module):
     """
     v2 adds self attention between the tokens
     """
 
     def __init__(
-        self, vocab_size, context_size, embedding_dim=32, num_heads=4, head_dim=8
+        self, vocab_size, context_size, embedding_dim=32, num_attention_heads=4
     ):
         super().__init__()
         self.tok_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.pos_embeddings = nn.Embedding(context_size, embedding_dim)
-        self.att = MultiHeadAttention(num_heads, embedding_dim, head_dim, context_size)
-        self.lm_head = nn.Linear(head_dim * num_heads, vocab_size)
+        self.transformer = nn.Sequential(
+            TransformerBlock(embedding_dim, num_attention_heads, context_size),
+            TransformerBlock(embedding_dim, num_attention_heads, context_size),
+            TransformerBlock(embedding_dim, num_attention_heads, context_size),
+        )
+        self.lm_head = nn.Linear(embedding_dim, vocab_size)
 
     def forward(self, idx, targets=None):
         tok_embedding = self.tok_embeddings(idx)
@@ -143,8 +162,8 @@ class BigramLanguageModelv2(nn.Module):
             torch.arange(idx.shape[1], device=tok_embedding.device)
         )
         embedding = tok_embedding + pos_embedding
-        att = self.att(embedding)
-        logits = self.lm_head(att)
+        comp = self.transformer(embedding)
+        logits = self.lm_head(comp)
 
         if targets is not None:
             batch_size, time_step, data_dim = logits.shape
