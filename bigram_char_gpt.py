@@ -1,4 +1,4 @@
-from src.models.bigram_model import BigramLanguageModelv0
+from src.models.bigram_model import BigramLanguageModelv0, BigramLanguageModelv1, BigramLanguageModelv2
 from src.tokenizers.char_tokenizer import CharTokenizer
 from src.dataloaders.block_loader import BlockLoader
 from src.loss import estimate_loss
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     torch.manual_seed(SEED)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    # device = "cpu"
 
     data = open(DATA_PATH, "r", encoding="utf-8").read()
     tokenizer = CharTokenizer(data)
@@ -33,7 +34,9 @@ if __name__ == "__main__":
     train_loader = BlockLoader(train_data, BATCH_SIZE, CONTEXT_LENGTH, device)
     val_loader = BlockLoader(val_data, BATCH_SIZE, CONTEXT_LENGTH, device)
 
-    model = BigramLanguageModelv0(tokenizer.vocab_size)
+    # model = BigramLanguageModelv0(tokenizer.vocab_size, tokenizer.vocab_size)
+    # model = BigramLanguageModelv1(tokenizer.vocab_size, CONTEXT_LENGTH)
+    model = BigramLanguageModelv2(tokenizer.vocab_size, CONTEXT_LENGTH)
     model.to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
@@ -47,7 +50,7 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
 
-        if steps + 1 % EVAL_INTERVAL_STEPS == 0:
+        if (steps + 1) % EVAL_INTERVAL_STEPS == 0:
             train_loss = estimate_loss(model, train_loader)
             val_loss = estimate_loss(model, val_loader)
             print(
