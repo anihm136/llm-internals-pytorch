@@ -14,7 +14,7 @@ if __name__ == "__main__":
     BATCH_SIZE = 32
     CONTEXT_LENGTH = 8
 
-    TRAIN_STEPS = 10000
+    TRAIN_STEPS = 5000
     EVAL_INTERVAL_STEPS = 500
 
     torch.manual_seed(SEED)

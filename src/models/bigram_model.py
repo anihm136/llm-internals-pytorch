@@ -118,29 +118,40 @@ class MultiHeadAttention(nn.Module):
                 for _ in range(num_heads)
             ]
         )
+        self.proj = nn.Linear(num_heads * head_dim, input_dim)
 
     def forward(self, idx):
-        return torch.cat([h(idx) for h in self.heads], dim=-1)
+        idx = torch.cat([h(idx) for h in self.heads], dim=-1)
+        idx = self.proj(idx)
+        return idx
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, embedding_dim, num_attention_heads, context_size):
+    def __init__(
+        self, embedding_dim, num_attention_heads, context_size, scale_inner_ffwd_layer=4
+    ):
         super().__init__()
         head_dim = embedding_dim // num_attention_heads
         self.att = MultiHeadAttention(
             num_attention_heads, embedding_dim, head_dim, context_size
         )
-        self.ffwd = nn.Sequential(nn.Linear(embedding_dim, embedding_dim), nn.ReLU())
+        self.ffwd = nn.Sequential(
+            nn.Linear(embedding_dim, embedding_dim * scale_inner_ffwd_layer),
+            nn.ReLU(),
+            nn.Linear(embedding_dim * scale_inner_ffwd_layer, embedding_dim),
+        )
 
     def forward(self, idx):
-        idx = self.att(idx)
-        idx = self.ffwd(idx)
+        # Attention and feedforward as residual channel operations instead of
+        # direct- these should start kicking in later in the optimization process
+        idx = idx + self.att(idx)
+        idx = idx + self.ffwd(idx)
         return idx
 
 
 class BigramLanguageModelv2(nn.Module):
     """
-    v2 adds self attention between the tokens
+    v2 adds transformer blocks for communication and computation between tokens
     """
 
     def __init__(
