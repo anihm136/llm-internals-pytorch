@@ -140,12 +140,14 @@ class TransformerBlock(nn.Module):
             nn.ReLU(),
             nn.Linear(embedding_dim * scale_inner_ffwd_layer, embedding_dim),
         )
+        self.ln1 = nn.LayerNorm(embedding_dim)
+        self.ln2 = nn.LayerNorm(embedding_dim)
 
     def forward(self, idx):
         # Attention and feedforward as residual channel operations instead of
         # direct- these should start kicking in later in the optimization process
-        idx = idx + self.att(idx)
-        idx = idx + self.ffwd(idx)
+        idx = idx + self.att(self.ln1(idx))
+        idx = idx + self.ffwd(self.ln2(idx))
         return idx
 
 
@@ -164,6 +166,7 @@ class BigramLanguageModelv2(nn.Module):
             TransformerBlock(embedding_dim, num_attention_heads, context_size),
             TransformerBlock(embedding_dim, num_attention_heads, context_size),
             TransformerBlock(embedding_dim, num_attention_heads, context_size),
+            nn.LayerNorm(embedding_dim)
         )
         self.lm_head = nn.Linear(embedding_dim, vocab_size)
 
